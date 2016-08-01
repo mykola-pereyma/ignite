@@ -27,6 +27,7 @@ import org.apache.ignite.Ignition;
 import org.apache.ignite.internal.IgniteKernal;
 import org.apache.ignite.internal.processors.cache.IgniteInternalCache;
 import org.apache.ignite.internal.util.typedef.G;
+import org.hibernate.boot.spi.SessionFactoryOptions;
 import org.hibernate.cache.CacheException;
 import org.hibernate.cache.spi.CacheDataDescription;
 import org.hibernate.cache.spi.CollectionRegion;
@@ -36,7 +37,6 @@ import org.hibernate.cache.spi.QueryResultsRegion;
 import org.hibernate.cache.spi.RegionFactory;
 import org.hibernate.cache.spi.TimestampsRegion;
 import org.hibernate.cache.spi.access.AccessType;
-import org.hibernate.cfg.Settings;
 
 import static org.hibernate.cache.spi.access.AccessType.NONSTRICT_READ_WRITE;
 
@@ -100,7 +100,7 @@ public class HibernateRegionFactory implements RegionFactory {
     private final ThreadLocal threadLoc = new ThreadLocal();
 
     /** {@inheritDoc} */
-    @Override public void start(Settings settings, Properties props) throws CacheException {
+    @Override public void start(SessionFactoryOptions options, Properties props) throws CacheException {
         String gridCfg = props.getProperty(GRID_CONFIG_PROPERTY);
         String gridName = props.getProperty(GRID_NAME_PROPERTY);
 

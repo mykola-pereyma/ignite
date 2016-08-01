@@ -43,16 +43,22 @@ import org.hibernate.ObjectNotFoundException;
 import org.hibernate.Query;
 import org.hibernate.Session;
 import org.hibernate.SessionFactory;
-import org.hibernate.StaleObjectStateException;
+import org.hibernate.StaleStateException;
 import org.hibernate.Transaction;
 import org.hibernate.annotations.NaturalId;
 import org.hibernate.annotations.NaturalIdCache;
+import org.hibernate.boot.Metadata;
+import org.hibernate.boot.MetadataSources;
+import org.hibernate.boot.registry.StandardServiceRegistry;
+import org.hibernate.boot.registry.StandardServiceRegistryBuilder;
 import org.hibernate.cache.spi.GeneralDataRegion;
 import org.hibernate.cache.spi.TransactionalDataRegion;
 import org.hibernate.cache.spi.access.AccessType;
 import org.hibernate.cfg.Configuration;
+import org.hibernate.cfg.Environment;
 import org.hibernate.exception.ConstraintViolationException;
-import org.hibernate.service.ServiceRegistryBuilder;
+import org.hibernate.mapping.PersistentClass;
+import org.hibernate.mapping.RootClass;
 import org.hibernate.stat.NaturalIdCacheStatistics;
 import org.hibernate.stat.SecondLevelCacheStatistics;
 
@@ -423,6 +429,7 @@ public class HibernateL2CacheSelfTest extends GridCommonAbstractTest {
             transactionalRegionConfiguration(ENTITY2_NAME),
             transactionalRegionConfiguration(VERSIONED_ENTITY_NAME),
             transactionalRegionConfiguration(PARENT_ENTITY_NAME),
+            transactionalRegionConfiguration(ChildEntity.class.getName()),
             transactionalRegionConfiguration(CHILD_COLLECTION_REGION),
             transactionalRegionConfiguration(NATURAL_ID_REGION),
             transactionalRegionConfiguration(NATURAL_ID_REGION2));
@@ -489,30 +496,6 @@ public class HibernateL2CacheSelfTest extends GridCommonAbstractTest {
         cfg.addAnnotatedClass(ChildEntity.class);
         cfg.addAnnotatedClass(ParentEntity.class);
 
-        cfg.setCacheConcurrencyStrategy(ENTITY_NAME, accessType.getExternalName());
-        cfg.setCacheConcurrencyStrategy(ENTITY2_NAME, accessType.getExternalName());
-        cfg.setCacheConcurrencyStrategy(VERSIONED_ENTITY_NAME, accessType.getExternalName());
-        cfg.setCacheConcurrencyStrategy(PARENT_ENTITY_NAME, accessType.getExternalName());
-        cfg.setCollectionCacheConcurrencyStrategy(CHILD_COLLECTION_REGION, accessType.getExternalName());
-
-        cfg.setProperty(HBM2DDL_AUTO, "create");
-
-        cfg.setProperty(GENERATE_STATISTICS, "true");
-
-        cfg.setProperty(USE_SECOND_LEVEL_CACHE, "true");
-
-        cfg.setProperty(USE_QUERY_CACHE, "true");
-
-        cfg.setProperty(CACHE_REGION_FACTORY, HibernateRegionFactory.class.getName());
-
-        cfg.setProperty(RELEASE_CONNECTIONS, "on_close");
-
-        cfg.setProperty(GRID_NAME_PROPERTY, gridName);
-
-        // Use the same cache for Entity and Entity2.
-        cfg.setProperty(REGION_CACHE_PROPERTY + ENTITY2_NAME, ENTITY_NAME);
-
-        cfg.setProperty(DFLT_ACCESS_TYPE_PROPERTY, accessType.name());
 
         return cfg;
     }
@@ -520,8 +503,8 @@ public class HibernateL2CacheSelfTest extends GridCommonAbstractTest {
     /**
      * @return Hibernate registry builder.
      */
-    protected ServiceRegistryBuilder registryBuilder() {
-        ServiceRegistryBuilder builder = new ServiceRegistryBuilder();
+    protected StandardServiceRegistryBuilder registryBuilder() {
+        StandardServiceRegistryBuilder builder = new StandardServiceRegistryBuilder();
 
         builder.applySetting("hibernate.connection.url", CONNECTION_URL);
 
@@ -1111,7 +1094,7 @@ public class HibernateL2CacheSelfTest extends GridCommonAbstractTest {
 
                 fail("Commit must fail.");
             }
-            catch (StaleObjectStateException e) {
+            catch (StaleStateException e) {
                 log.info("Expected exception: " + e);
             }
             finally {
@@ -1802,7 +1785,7 @@ public class HibernateL2CacheSelfTest extends GridCommonAbstractTest {
      */
     @SuppressWarnings("unchecked")
     private void assertCollectionCache(SessionFactory sesFactory, Map<Integer, Integer> idToChildCnt, int expHit,
-        int expMiss) {
+                                       int expMiss) {
         sesFactory.getStatistics().clear();
 
         Session ses = sesFactory.openSession();
@@ -1918,13 +1901,45 @@ public class HibernateL2CacheSelfTest extends GridCommonAbstractTest {
      * @return Session factory.
      */
     private SessionFactory startHibernate(org.hibernate.cache.spi.access.AccessType accessType, String gridName) {
-        Configuration cfg = hibernateConfiguration(accessType, gridName);
+        StandardServiceRegistryBuilder builder = registryBuilder();
 
-        ServiceRegistryBuilder builder = registryBuilder();
-
+        builder.applySetting(HBM2DDL_AUTO, "create");
+        builder.applySetting(GENERATE_STATISTICS, "true");
+        builder.applySetting(USE_SECOND_LEVEL_CACHE, "true");
+        builder.applySetting(USE_QUERY_CACHE, "true");
+        builder.applySetting(CACHE_REGION_FACTORY, HibernateRegionFactory.class.getName());
+        builder.applySetting(RELEASE_CONNECTIONS, "on_close");
+        builder.applySetting(GRID_NAME_PROPERTY, gridName);
+        // Use the same cache for Entity and Entity2.
+        builder.applySetting(REGION_CACHE_PROPERTY + ENTITY2_NAME, ENTITY_NAME);
+        builder.applySetting(DFLT_ACCESS_TYPE_PROPERTY, accessType.name());
+        builder.applySetting(Environment.DIALECT, "org.hibernate.dialect.H2Dialect");
         builder.applySetting("hibernate.show_sql", false);
 
-        return cfg.buildSessionFactory(builder.buildServiceRegistry());
+        StandardServiceRegistry serviceRegistry = builder.build();
+
+        MetadataSources metadataSources = new MetadataSources( serviceRegistry );
+        for ( Class entityClass : getAnnotatedClasses() ) {
+            metadataSources.addAnnotatedClass( entityClass );
+        }
+
+        Metadata metadata = metadataSources.buildMetadata();
+
+        for ( PersistentClass entityBinding : metadata.getEntityBindings() ) {
+            if (!entityBinding.isInherited()) {
+                ( (RootClass) entityBinding ).setCacheConcurrencyStrategy( accessType.getExternalName());
+            }
+        }
+
+        for ( org.hibernate.mapping.Collection collectionBinding : metadata.getCollectionBindings() ) {
+            collectionBinding.setCacheConcurrencyStrategy( accessType.getExternalName() );
+        }
+
+        return metadata.buildSessionFactory();
+    }
+
+    private Class[] getAnnotatedClasses() {
+        return new Class[]{Entity.class, Entity2.class, VersionedEntity.class, ChildEntity.class, ParentEntity.class};
     }
 
     /**

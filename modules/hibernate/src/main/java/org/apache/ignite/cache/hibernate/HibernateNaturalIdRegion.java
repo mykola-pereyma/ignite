@@ -20,11 +20,14 @@ package org.apache.ignite.cache.hibernate;
 import org.apache.ignite.Ignite;
 import org.apache.ignite.internal.processors.cache.IgniteInternalCache;
 import org.hibernate.cache.CacheException;
+import org.hibernate.cache.internal.DefaultCacheKeysFactory;
 import org.hibernate.cache.spi.CacheDataDescription;
 import org.hibernate.cache.spi.NaturalIdRegion;
 import org.hibernate.cache.spi.access.AccessType;
 import org.hibernate.cache.spi.access.NaturalIdRegionAccessStrategy;
 import org.hibernate.cache.spi.access.SoftLock;
+import org.hibernate.engine.spi.SessionImplementor;
+import org.hibernate.persister.entity.EntityPersister;
 
 /**
  * Implementation of {@link NaturalIdRegion}. This region is used to store naturalId data.
@@ -74,27 +77,37 @@ public class HibernateNaturalIdRegion extends HibernateTransactionalDataRegion i
         }
 
         /** {@inheritDoc} */
+        @Override public Object generateCacheKey(Object[] naturalIdValues, EntityPersister persister, SessionImplementor session) {
+            return DefaultCacheKeysFactory.createNaturalIdKey(naturalIdValues, persister, session);
+        }
+
+        /** {@inheritDoc} */
+        @Override public Object[] getNaturalIdValues(Object cacheKey) {
+            return DefaultCacheKeysFactory.getNaturalIdValues(cacheKey);
+        }
+
+        /** {@inheritDoc} */
         @Override public NaturalIdRegion getRegion() {
             return HibernateNaturalIdRegion.this;
         }
 
         /** {@inheritDoc} */
-        @Override public boolean insert(Object key, Object val) throws CacheException {
+        @Override public boolean insert(SessionImplementor session, Object key, Object val) throws CacheException {
             return stgy.insert(key, val);
         }
 
         /** {@inheritDoc} */
-        @Override public boolean afterInsert(Object key, Object val) throws CacheException {
+        @Override public boolean afterInsert(SessionImplementor session, Object key, Object val) throws CacheException {
             return stgy.afterInsert(key, val);
         }
 
         /** {@inheritDoc} */
-        @Override public boolean update(Object key, Object val) throws CacheException {
+        @Override public boolean update(SessionImplementor session, Object key, Object val) throws CacheException {
             return stgy.update(key, val);
         }
 
         /** {@inheritDoc} */
-        @Override public boolean afterUpdate(Object key, Object val, SoftLock lock) throws CacheException {
+        @Override public boolean afterUpdate(SessionImplementor session, Object key, Object val, SoftLock lock) throws CacheException {
             return stgy.afterUpdate(key, val, lock);
         }
     }

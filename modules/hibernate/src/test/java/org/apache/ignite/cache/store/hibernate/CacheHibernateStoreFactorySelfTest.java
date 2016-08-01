@@ -17,13 +17,13 @@
 
 package org.apache.ignite.cache.store.hibernate;
 
-import java.io.Serializable;
 import java.sql.Connection;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.Callable;
 import javax.naming.NamingException;
 import javax.naming.Reference;
+
 import org.apache.ignite.Ignite;
 import org.apache.ignite.IgniteCache;
 import org.apache.ignite.IgniteException;
@@ -39,6 +39,7 @@ import org.hibernate.SessionFactory;
 import org.hibernate.StatelessSession;
 import org.hibernate.StatelessSessionBuilder;
 import org.hibernate.TypeHelper;
+import org.hibernate.boot.spi.SessionFactoryOptions;
 import org.hibernate.engine.spi.FilterDefinition;
 import org.hibernate.metadata.ClassMetadata;
 import org.hibernate.metadata.CollectionMetadata;
@@ -68,9 +69,9 @@ public class CacheHibernateStoreFactorySelfTest extends GridCommonAbstractTest {
     public void testXmlConfiguration() throws Exception {
         try (Ignite ignite = Ignition.start("modules/hibernate/src/test/config/factory-cache.xml")) {
             try(Ignite ignite1 = Ignition.start("modules/hibernate/src/test/config/factory-cache1.xml")) {
-                checkStore(ignite.<Integer, String>cache(CACHE_NAME), DummySessionFactoryExt.class);
+                checkStore(ignite.cache(CACHE_NAME), DummySessionFactoryExt.class);
 
-                checkStore(ignite1.<Integer, String>cache(CACHE_NAME), DummySessionFactory.class);
+                checkStore(ignite1.cache(CACHE_NAME), DummySessionFactory.class);
             }
         }
     }
@@ -223,38 +224,6 @@ public class CacheHibernateStoreFactorySelfTest extends GridCommonAbstractTest {
         /** {@inheritDoc} */
         @Override public Cache getCache() {
             return null;
-        }
-
-        /** {@inheritDoc} */
-        @Override public void evict(Class persistentClass) throws HibernateException {
-        }
-
-        /** {@inheritDoc} */
-        @Override public void evict(Class persistentClass, Serializable id) throws HibernateException {
-        }
-
-        /** {@inheritDoc} */
-        @Override public void evictEntity(String entityName) throws HibernateException {
-        }
-
-        /** {@inheritDoc} */
-        @Override public void evictEntity(String entityName, Serializable id) throws HibernateException {
-        }
-
-        /** {@inheritDoc} */
-        @Override public void evictCollection(String roleName) throws HibernateException {
-        }
-
-        /** {@inheritDoc} */
-        @Override public void evictCollection(String roleName, Serializable id) throws HibernateException {
-        }
-
-        /** {@inheritDoc} */
-        @Override public void evictQueries(String cacheRegion) throws HibernateException {
-        }
-
-        /** {@inheritDoc} */
-        @Override public void evictQueries() throws HibernateException {
         }
 
         /** {@inheritDoc} */
