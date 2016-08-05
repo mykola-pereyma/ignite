@@ -19,7 +19,9 @@ package org.apache.ignite.cache.hibernate;
 
 import org.apache.ignite.Ignite;
 import org.apache.ignite.internal.processors.cache.IgniteInternalCache;
+import org.hibernate.cache.CacheException;
 import org.hibernate.cache.spi.TimestampsRegion;
+import org.hibernate.engine.spi.SessionImplementor;
 
 /**
  * Implementation of {@link TimestampsRegion}. This region is automatically created when query
@@ -36,5 +38,15 @@ public class HibernateTimestampsRegion extends HibernateGeneralDataRegion implem
     public HibernateTimestampsRegion(HibernateRegionFactory factory, String name,
         Ignite ignite, IgniteInternalCache<Object, Object> cache) {
         super(factory, name, ignite, cache);
+    }
+
+    /** {@inheritDoc} */
+    @Override public Object get(SessionImplementor session, Object key) throws CacheException {
+        return super.get(session, key);
+    }
+
+    /** {@inheritDoc} */
+    @Override public void put(SessionImplementor session, Object key, Object value) throws CacheException {
+        super.put(session, key, value);
     }
 }

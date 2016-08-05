@@ -37,9 +37,9 @@ import org.hibernate.Session;
 import org.hibernate.SessionFactory;
 import org.hibernate.Transaction;
 import org.hibernate.annotations.CacheConcurrencyStrategy;
+import org.hibernate.boot.registry.StandardServiceRegistryBuilder;
 import org.hibernate.cache.spi.access.AccessType;
 import org.hibernate.cfg.Configuration;
-import org.hibernate.service.ServiceRegistryBuilder;
 
 import static org.apache.ignite.cache.CacheAtomicityMode.ATOMIC;
 import static org.apache.ignite.cache.CacheMode.PARTITIONED;
@@ -286,12 +286,13 @@ public class HibernateL2CacheConfigurationSelfTest extends GridCommonAbstractTes
     private SessionFactory startHibernate(String gridName) {
         Configuration cfg = hibernateConfiguration(gridName);
 
-        ServiceRegistryBuilder builder = new ServiceRegistryBuilder();
+        StandardServiceRegistryBuilder builder = new StandardServiceRegistryBuilder();
 
         builder.applySetting("hibernate.connection.url", CONNECTION_URL);
         builder.applySetting("hibernate.show_sql", false);
+        builder.applySettings(cfg.getProperties());
 
-        return cfg.buildSessionFactory(builder.buildServiceRegistry());
+        return cfg.buildSessionFactory(builder.build());
     }
 
     /**

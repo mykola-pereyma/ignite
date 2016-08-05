@@ -20,10 +20,13 @@ package org.apache.ignite.cache.hibernate;
 import org.apache.ignite.Ignite;
 import org.apache.ignite.internal.processors.cache.IgniteInternalCache;
 import org.hibernate.cache.CacheException;
+import org.hibernate.cache.internal.DefaultCacheKeysFactory;
 import org.hibernate.cache.spi.CacheDataDescription;
 import org.hibernate.cache.spi.CollectionRegion;
 import org.hibernate.cache.spi.access.AccessType;
 import org.hibernate.cache.spi.access.CollectionRegionAccessStrategy;
+import org.hibernate.engine.spi.SessionFactoryImplementor;
+import org.hibernate.persister.collection.CollectionPersister;
 
 /**
  * Implementation of {@link CollectionRegion}. This region is used to store collection data.
@@ -91,6 +94,17 @@ public class HibernateCollectionRegion extends HibernateTransactionalDataRegion 
          */
         private AccessStrategy(HibernateAccessStrategyAdapter stgy) {
             super(stgy);
+        }
+
+        /** {@inheritDoc} */
+        @Override public Object generateCacheKey(Object id, CollectionPersister persister,
+                                                 SessionFactoryImplementor factory, String tenantIdentifier) {
+            return DefaultCacheKeysFactory.createCollectionKey(id, persister, factory,tenantIdentifier);
+        }
+
+        /** {@inheritDoc} */
+        @Override public Object getCacheKeyId(Object cacheKey) {
+            return DefaultCacheKeysFactory.getCollectionId(cacheKey);
         }
 
         /** {@inheritDoc} */
